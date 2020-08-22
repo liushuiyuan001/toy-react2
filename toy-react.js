@@ -83,7 +83,7 @@ export class Component {
                
           }
           let vdom = this.vdom
-          update(this._vdom, this.vdom)
+          update(this._vdom, vdom)
           this._vdom = vdom
       }
       // rerender() {
@@ -220,7 +220,7 @@ export function createElement(type, attributes, ...children) {
       for (const p in attributes) {
           e.setAttribute(p, attributes[p])        
       }
-      let insertChihld = (children) => {
+      let insertChildren = (children) => {
             for (let child of children) {
                   if (typeof child === 'string') {
                         child = new TextWrapper(child)
@@ -229,13 +229,13 @@ export function createElement(type, attributes, ...children) {
                         continue
                   }
                   if ((typeof child === 'object') && (child instanceof Array)) {
-                        insertChihld(child)
+                        insertChildren(child)
                   } else {
                         e.appendChild(child)
                   }
             }  
       }
-      insertChihld(children)
+      insertChildren(children)
 
       return e
 }
