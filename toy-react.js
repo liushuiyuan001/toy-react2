@@ -27,20 +27,23 @@ export class Component {
                 if(oldNode.type !== newNode.type) {
                    return false
                 }
-                if(Object.keys(oldNode.props).length > Object.keys(newNode.props).length) {
-                      return false
-                }
+
                 for(let name in newNode.props) {
                    if(newNode.props[name] !== oldNode.props[name]) {
                          return false
                    }          
                 }
                 
+                if(Object.keys(oldNode.props).length > Object.keys(newNode.props).length) {
+                  return false
+                }
+
                 if(newNode.type === "#text") {
                       if(newNode.content !== oldNode.content) {
                             return false
                       }
                 }
+
                 return true
           }
           let update = (oldNode, newNode) => {
@@ -55,13 +58,26 @@ export class Component {
                let newChildren = newNode.vchildren
                let oldChildren = oldNode.vchildren
 
-               for(let i = 0; i < oldChildren.length; i++){
+               if (!newChildren || !newChildren.length) {
+                     return
+               }
+
+               let tailRange = oldChildren[oldChildren.length - 1]._range
+
+               for(let i = 0; i < newChildren.length; i++){
                   let newChild = newChildren[i]
                   let oldChild = oldChildren[i]
                   if (i < oldChildren.length) {
                      update(oldChild, newChild)
                   } else {
                       //TODO
+                      let range = document.createRange()
+                      range.setStart(tailRange.endContainer, tailRange.endOffset)
+                      range.setEnd(tailRange.endContainer, tailRange.endOffset)
+
+                      newChild[RENDER_TO_DOM](range)
+                      tailRange = range
+
                   }
             }
                
@@ -132,7 +148,7 @@ class ElementWrapper extends Component {
             return this
       }
       [RENDER_TO_DOM](range) {
-            range.deleteContents();
+            this._range = range
 
             let root = document.createElement(this.type)
 
@@ -159,8 +175,7 @@ class ElementWrapper extends Component {
                   chidlRange.setEnd(root, root.childNodes.length)
                   child[RENDER_TO_DOM](chidlRange)    
             }
-
-            range.insertNode(root);
+            replaceContent(range,root)
       } 
 }
 
@@ -169,7 +184,6 @@ class TextWrapper extends Component{
             super(content)
             this.type = '#text'
             this.content = content
-            this.root = document.createTextNode(content)
       }
       get vdom() {
             return this
@@ -179,9 +193,21 @@ class TextWrapper extends Component{
             // }
       }
       [RENDER_TO_DOM](range) {
-            range.deleteContents();
-            range.insertNode(this.root);
+            this._range = range
+
+            let root = document.createTextNode(this.content)
+            replaceContent(range, root)
       }
+}
+
+
+function replaceContent(range, node) {
+    range.insertNode(node)
+    range.setStartAfter(node)
+    range.deleteContents()
+
+    range.setStartBefore(node)
+    range.setEndAfter(node)
 }
 
 export function createElement(type, attributes, ...children) {
@@ -192,7 +218,6 @@ export function createElement(type, attributes, ...children) {
           e = new type
       }
       for (const p in attributes) {
-          const element = attributes[p];
           e.setAttribute(p, attributes[p])        
       }
       let insertChihld = (children) => {
@@ -203,7 +228,7 @@ export function createElement(type, attributes, ...children) {
                   if (child === null) {
                         continue
                   }
-                  if (typeof child === 'object' && child instanceof Array) {
+                  if ((typeof child === 'object') && (child instanceof Array)) {
                         insertChihld(child)
                   } else {
                         e.appendChild(child)
@@ -211,6 +236,7 @@ export function createElement(type, attributes, ...children) {
             }  
       }
       insertChihld(children)
+
       return e
 }
 
